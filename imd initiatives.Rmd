@@ -1,0 +1,22 @@
+---
+title: "Major Initiatives for Fiscal Year 2016"
+author: "Karl Polen"
+date: "September 6, 2016"
+output: word_document
+---
+
+## Investments:
+* Continued implementation of Strategic Asset Allocation adopted in March of 2015 (the "SAA")
+    + Achieved target funding for real estate and private equity portfolios
+    + Made substantial progress in implementing private debt with target funding projected to be achieved during the 2016/2017 fiscal year
+    + Realigned equity and fixed income portfolios as envisioned in the SAA
+* Upgraded compliance systems
+    + Now test all trades for policy and statutory compliance on a daily basis
+    + Implemented a private markets compliance monitoring program to test that valuation, expense and fee policies are all properly implemented in accordance with the partnership agreements and with appropriate reporting to the partners
+* Improved cash management and assetization operations
+    + reducing cash balances
+    + ensuring 100% assetization on a daily basis
+    + improving returns associated with the assetization process
+* Began implementation of improved performance measurement systems
+    + completed systems for equity portfolio including returns and style based analysis
+    + planned completion of fixed income and total fund systems during the 2016/2017 fiscal year
