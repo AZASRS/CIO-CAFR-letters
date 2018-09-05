@@ -8,7 +8,6 @@ output: word_document
 library(knitr)
 library(asrsMethods)
 library(asrsPalettes)
-IMDpalette=IMD.palette()
 #opts_chunk$set(echo=FALSE, cache=FALSE)
 #read_chunk('CIO Report 2018 r script.r')
 ```
@@ -98,9 +97,9 @@ cval=70
 #lowcolor=muted(brewer.pal(8,'Dark2')[6],l=lval,c=cval)
 #highcolor=muted(brewer.pal(8,'Dark2')[1],l=lval,c=cval)
 #colorpalette=muted(brewer.pal(8,'Dark2'),l=lval,c=cval)[c(1,6)]
-lowcolor=IMDpalette()[2]
-highcolor=IMDpalette()[3]
-colorpalette=IMDpalette()[2:3]
+lowcolor=IMD.palette()[2]
+highcolor=IMD.palette()[3]
+colorpalette=IMD.palette()[2:3]
 require(ggplot2)
 ggplot(bbg.gg,aes(y=Index,x=Date,label=Return),ylim=c(1,length(tickers)))+
   geom_tile(aes(fill=Return))+
@@ -118,12 +117,12 @@ ggplot(bbg.gg,aes(y=Index,x=Date,label=Return),ylim=c(1,length(tickers)))+
 ```
 
 
-The following chart shows returns earned by ASRS over the last 40 years compared to market benchmarks.   ASRS returns were 13.9% in the most recent fiscal year.  While this one year return was 10bp (one tenth of one percent) below its benchmark, ASRS outperformed market benchmarks in all longer periods including a 9.7% compounded return for the last 42 years, compared to a benchmark of 9.5%.  
+The following chart shows returns earned by ASRS over the last 40 years compared to market benchmarks.   ASRS returns were 9.5% in the most recent fiscal year which is 1.1% higher than the SAA benchmark.  Returns for the three, five and ten year periods exceeded the benchmark by .7% to .9% per year.  Over the 43 years since 1975, ASRS has earned a compounded return of 9.7% per year which is .3% higher than the benchmark for that period.
 
 ```{r, echo=FALSE, warning=FALSE, message=FALSE, fig.height=3.5, fig.width=7}
 desc=c("One Year","Three Year","Five Year","Ten Year","Inception (since 1975)")
-return_actual=c(13.9,5.7,9.6,5.6,9.7)
-return_bench=c(14,4.8,8.8,5.2,9.5)
+return_actual=c(9.5,7.9,8.9,7.4,9.7)
+return_bench=c(8.4,7.1,8.0,6.7,9.4)
 df.actual=data.frame(Return="Actual",id=1:length(desc),desc,Returns=return_actual)
 df.bench=data.frame(Return="Benchmark",id=1:length(desc),desc,Returns=return_bench)
 df.both=rbind(df.actual,df.bench)
