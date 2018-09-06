@@ -15,7 +15,7 @@ library(asrsPalettes)
 
 It is a privilege to deliver this Investment Section to the Comprehensive Annual Financial Report of the Arizona State Retirement System.  In this section we will discuss our investment philosophy, the investment environment and our investment results.  We will also discuss our commitment to compliance, governance, rigorous measurement, and transparent reporting.  Finally, we will deliver various documents and schedules providing detailed information about the ASRS investment program.
 
-## Investment Philosophy
+## Investment Strategy
 
 ASRS manages its investments in accordance with a strategic asset allocation.  The ASRS investment team seeks to enhance returns compared strategic asset allocation benchmarks through its implementation of the investment program and tactical positioning relative to strategic targets.
 
