@@ -71,7 +71,7 @@ if (isfactors)
   asset.name=c("Momentum","Quality","Size","Value","Hi Div Yield","Low Vol","MSCI Large")
 asset.ind=c("a","b","c","d","e","f","g","h","i","j","k")
 asset.name=rev(asset.name)
-conn=blpConnect(verbose=FALSE)
+conn=blpConnect (verbose=FALSE)
 start.date=as.Date("2018-7-4")-years(15)-months(1)
 end.date=as.Date("2018-7-4")
 bbgdat=bdh(conn,tickers,"PX_LAST",start_date=start.date,end_date=end.date,
@@ -137,7 +137,7 @@ ggplot(df.both,aes(x=id,y=Returns,fill=Return))+
   )
 ```
 
-Stated in terms of dollars, small differences in returns compound over a number of years have a big impact on the value of the total fund.  The 1% outperformance in the most recent year translates to additional profits of \$368 million added to the value of the fund.  Over ten years, the .7% outperformance added \$3.1 billion in value to the fund.
+Stated in terms of dollars, small differences in returns compounded over a number of years have a big impact on the value of the total fund.  The 1% outperformance in the most recent year translates to additional profits of \$368 million added to the value of the fund.  Over ten years, the .7% outperformance added \$3.1 billion in value to the fund.
 
 
 ```{r , echo=FALSE, warning=FALSE, message=FALSE, fig.height=3.5, fig.width=7}
@@ -248,7 +248,7 @@ While cost management is not an investment strategy per se, cost reduction is on
 
 In the case of public markets where research and experience indicate that the prospects for adding value through management are limited, we are parsimonious in the payment of fees.  We manage approximately 50% of public market assets in house at effectively zero incremental cost.  Internally managed assets are implemented in enhanced index strategies designed to earn a premium compared to market returns and these strategies in aggregate have consistently outperformed their benchmarks by about 10bp per year.
 
-In private markets, costs are necessarily higher to implement these programs and we carefully monitor investments to ensure these costs are appropriately rewarded.  We are extremely cost conscious in the implementation of the private markets program.  We reduce costs by concentrating our relationships with a smaller number of highly qualified managers who agree to enter in to custom negotiated partnerships at reduced fees.  These partnerships, called "separate accounts", provide benefits to ASRS beyond reduced fees including custom investment criteria and favorable liquidity terms that give ASRS rights to influence or determine the pace of investment and liquidation of the partnership.  ASRS plans to continue to grow the separate account program to around 75% of private market assets.  
+In private markets, costs are necessarily higher to implement these programs and we carefully monitor investments to ensure these costs are appropriate.  We are extremely cost conscious in the implementation of the private markets program.  We reduce costs by concentrating our relationships with a smaller number of highly qualified managers who agree to enter in to custom negotiated partnerships at reduced fees.  These partnerships, called "separate accounts", provide benefits to ASRS beyond reduced fees including custom investment criteria and favorable liquidity terms that give ASRS rights to influence or determine the pace of investment and liquidation of the partnership.  ASRS plans to continue to grow the separate account program to around 75% of private market assets.  
 
 ## Reporting and Performance Measurement
 
