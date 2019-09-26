@@ -1,0 +1,270 @@
+---
+title: "Chief Investment Officer's Report"
+author: "Karl Polen"
+date: "October 1, 2018"
+output: word_document
+---
+```{r initialize, echo=FALSE, message=FALSE, warning=FALSE}
+library(knitr)
+library(asrsMethods)
+library(asrsPalettes)
+#opts_chunk$set(echo=FALSE, cache=FALSE)
+#read_chunk('CIO Report 2018 r script.r')
+```
+
+
+It is a privilege to deliver this Investment Section to the Comprehensive Annual Financial Report of the Arizona State Retirement System.  In this section we will discuss our investment strategy, the investment environment and our investment results.  We will also discuss our commitment to compliance, governance, rigorous measurement, and transparent reporting.  Finally, we will deliver various documents and schedules providing detailed information about the ASRS investment program.
+
+## Investment Strategy
+
+ASRS manages its investments in accordance with a strategic asset allocation.  The ASRS investment team seeks to enhance returns compared to strategic asset allocation benchmarks through its implementation of the investment program and tactical positioning relative to strategic targets.
+
+Fundamentally, investment returns are rewards for risks taken.  ASRS manages its risk in a highly diversified program across multiple global markets including equities, real estate and credit.  The diversity of the program expands opportunities for gain and reduces risk that would be present in a more concentrated approach.    
+
+ASRS is a long-term investor with a multi-decade horizon for its decisions.  We will tolerate short-term market fluctuations in order to position ourselves for long run gains.  We are a value oriented investor and, at times, will buy in markets out of favor and patiently await their recovery. 
+
+ASRS maintains a high level of liquidity with assets totaling over thirty times the cash required to fund benefits. As a pension fund, the cash requirements for benefits are highly stable and predictable.  These two facts combine to give ASRS an advantage in the market allowing it to provide liquidity to market participants with less flexibility and unpredictable cash needs.  ASRS capitalizes on this by participating in less liquid private markets for equities, real estate and credit.  These programs have significantly enhanced the diversity of our investments and have increased our returns. 
+
+## Investment Environment
+
+Global capital markets have come a long way in recovering from the global financial crisis.   With economic conditions improving across the globe, equity markets are generally strong, especially in the United States which recently has seen record valuations.  Credit markets continue to be impacted as institutions continue to adjust to new regulatory regimes and ASRS has capitalized on this by providing liquidity to sectors no longer served by commercial banks.  Investment grade bond markets were buoyed for a number of years after the financial crisis by central bank policies including low interest rates and asset purchases sometimes referred to as "quantitative easing".  However, with improving conditions central banks have raised policy rates and reduced asset purchases.  Consequently, bond markets have been flat for the last two years.
+
+The following chart shows market returns for the last 15 years for the public market asset classes included in the ASRS strategic asset allocation.  
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE, fig.height=5.5, fig.width=8}
+isfactors=FALSE
+isindices=TRUE
+
+
+unzoo=function(x) {
+  timetemp=as.character(time(x))
+  nametemp=c("Date",colnames(x))
+  ans=cbind(timetemp,as.data.frame(x))
+  rownames(ans)=NULL
+  colnames(ans)=nametemp
+  return(ans)
+}
+gg=function(x,variable.name="Variable",value.name="Value") {
+  melt(unzoo(x),id.vars="Date",
+       variable.name=variable.name,
+       value.name=value.name)
+}
+
+require(reshape2)
+require(Rbbg)
+require(lubridate)
+require(zoo)
+require(RColorBrewer)
+require(scales)
+if (isindices) 
+  tickers=c("SPXT INDEX","SPTRMDCP INDEX","SPTRSMCP INDEX","NDDUEAFE INDEX","NCUDEAFE INDEX",
+          "NDUEEGF INDEX","LBUSTRUU INDEX","LT11TRUU INDEX","LUACTRUU Index",
+          "LF98TRUU INDEX","BCOMTR INDEX")
+if (isfactors) 
+  tickers=c("M2US000$ INDEX","M2USSNQ INDEX","M2USEW INDEX","M2USEV INDEX",
+            "M2USADVD INDEX","M2USMVOL INDEX","MLCUUSAG INDEX")
+tickers=(rev(tickers))
+if (isindices)
+  asset.name=c("Large Cap US Stocks","Mid-Cap US Stocks","Small Cap US Stocks","Large Cap International Stocks","Small Cap International Stocks","Emerging Markets Stocks",
+             "Barclays Agg","Long Treasury", "Investment Grade Bonds","High Yield Bonds","Commodities")
+if (isfactors)
+  asset.name=c("Momentum","Quality","Size","Value","Hi Div Yield","Low Vol","MSCI Large")
+asset.ind=c("a","b","c","d","e","f","g","h","i","j","k")
+asset.name=rev(asset.name)
+conn=blpConnect(verbose=FALSE)
+start.date=as.Date("2018-7-4")-years(15)-months(1)
+end.date=as.Date("2018-7-4")
+bbgdat=bdh(conn,tickers,"PX_LAST",start_date=start.date,end_date=end.date,
+           option_names="periodicitySelection",option_values="MONTHLY")
+x=blpDisconnect(conn)
+ndx=match(bbgdat$ticker,tickers)
+bbgdat$ticker=asset.ind[ndx]
+bbgdat2=dcast(bbgdat,date~ticker)
+bbgdate=as.yearmon(bbgdat2$date)
+bbgdat2=as.matrix(bbgdat2[,-1])
+bbgdatz=zoo(diff(log(bbgdat2)),bbgdate[-1])
+bbgdat.annual=-1+exp(rollapply(bbgdatz,width=12,by=12,FUN=sum,align='right'))
+bbgdat.annual=round(bbgdat.annual*100,1)
+bbgdat.excess=round(bbgdat.annual-bbgdat.annual[,1],2)
+bbg.gg=gg(bbgdat.annual)
+bbgexcess.gg=gg(bbgdat.excess)
+colnames(bbg.gg)=c("Date","Index","Return")
+colnames(bbgexcess.gg)=c("Date","Index","Return")
+lval=50
+cval=70
+#lowcolor=muted(brewer.pal(8,'Dark2')[6],l=lval,c=cval)
+#highcolor=muted(brewer.pal(8,'Dark2')[1],l=lval,c=cval)
+#colorpalette=muted(brewer.pal(8,'Dark2'),l=lval,c=cval)[c(1,6)]
+lowcolor=IMD.palette()[2]
+highcolor=IMD.palette()[3]
+colorpalette=IMD.palette()[2:3]
+require(ggplot2)
+ggplot(bbg.gg,aes(y=Index,x=Date,label=Return),ylim=c(1,length(tickers)))+
+  geom_tile(aes(fill=Return))+
+  scale_fill_gradient2(midpoint=0,low=lowcolor,high=highcolor)+
+  geom_text(size=3)+
+  scale_y_discrete("",breaks=asset.ind[1:length(asset.name)],
+                               labels=asset.name)+
+  ggtitle("One Year Returns\nfor indicated end dates")+
+  theme(
+    panel.background=element_blank(),
+    panel.grid.major=element_blank(),
+    panel.grid.minor=element_blank(),
+    axis.text.x=element_text(angle=90,hjust=1)
+  )
+```
+
+## Investment Results
+
+The ASRS investment program had another good year.  Not only were markets positive, but our implementation decisions added value compared to our benchmarks.  Our one year return of 9.4% exceeded our strategic asset allocation benchmark by 1%.  Our ten year return of 7.4% exceeded its benchmark by .7%.  Notably, the ten year results were only .1% lower than the long run actuarially assumed return of 7.5%, notwithstanding the devastating impacts of the global financial crisis during the early years of that time frame.  On a long run basis, ASRS has earned compound returns of 9.7% per year for the last 43 years.
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE, fig.height=3.5, fig.width=7}
+desc=c("One Year","Three Year","Five Year","Ten Year","Inception (since 1975)")
+return_actual=c(9.4,7.8,8.9,7.4,9.7)
+return_bench=c(8.4,7.1,8.0,6.7,9.4)
+df.actual=data.frame(Return="Actual",id=1:length(desc),desc,Returns=return_actual)
+df.bench=data.frame(Return="Benchmark",id=1:length(desc),desc,Returns=return_bench)
+df.both=rbind(df.actual,df.bench)
+ggplot(df.both,aes(x=id,y=Returns,fill=Return))+
+  geom_bar(stat="identity",position=position_dodge())+
+  scale_x_continuous("",breaks=1:length(desc),labels=desc)+
+  ggtitle("ASRS Total Fund Returns Compared to Market Benchmark")+
+  ylab("Annual Return")+
+  xlab("")+
+  scale_fill_manual(values=colorpalette)+
+  theme(
+    axis.text.x=element_text(angle=45,hjust=1)
+  )
+```
+
+Stated in terms of dollars, small differences in returns compound over a number of years have a big impact on the value of the total fund.  The 1% outperformance in the most recent year translates to additional profits of \$368 million added to the value of the fund.  Over ten years, the .7% outperformance added \$3.1 billion in value to the fund.
+
+
+```{r , echo=FALSE, warning=FALSE, message=FALSE, fig.height=3.5, fig.width=7}
+## code to show DVA for total fund 1,3,5,10 years
+library(xts)
+library(tidyr)
+library(ggplot2)
+library(lubridate)
+library(reshape2)
+library(PerformanceAnalytics)
+library(scales)
+library(gridExtra)
+library(dplyr)
+library(magrittr)
+library(ggpubr)
+library(grid)
+library(asrsMethods)
+library(asrsPalettes)
+
+tomillions = function(x) x/1000000
+label.d = "as of 6/30/18"
+
+#Because of data issues, fix the start AND end date for the attribution analysis
+end.date <- as.Date("2018-06-30")
+
+#Ten year window
+start.date <- end.date - years(10)
+xts.start <- as.Date("2008-07-31")
+xts.range <- paste0(xts.start, "/", end.date)
+
+nepc.dat <- read.csv("P:/IMD/Karl/R Projects/Public Performance/Data/CSVs/rNEPC.csv", stringsAsFactors = FALSE) %>%
+  mutate(ID = ShortName) %>%
+  mutate(Date = as.Date(AsOf, format = "%m/%d/%Y")) %>%
+  mutate(NetReturn = NetReturn/100) %>%
+  filter(between(Date, start.date, end.date) & Period == "Monthly")
+
+nepc.map <- read.csv("P:/IMD/Karl/R Projects/Public Performance/Data/Mapping/NEPC.map.csv", stringsAsFactors = FALSE)
+
+#get return, name, & inception date
+r <- subset(nepc.dat, nepc.dat$ID == "RAY0032", select = c('Date','NetReturn'))
+r.xts <- xts(r[,-1], r[,1])
+r.xts <- r.xts[!is.na(r.xts),]
+r.xts <- r.xts[!duplicated(index(r.xts)), ]
+r.xts <- r.xts[xts.range,]
+i.d <- as.character(time(r.xts)[1])
+
+#benchmarks for each asset class and convert Private Equity & Private Debt to quarterly
+b.tf <- subset(nepc.dat, nepc.dat$ID == "RAY0001", select = c('Date','NetReturn'))
+b.tf.xts <- xts(b.tf[ ,-1], b.tf[ ,1])
+b.tf.xts <- b.tf.xts[xts.range,]
+b.tf.xts <- b.tf.xts[!duplicated(index(b.tf.xts)), ]
+
+#get market values
+mv <- subset(nepc.dat, nepc.dat$ID == "RAY0032", select = c('Date','MthEndMV'))
+mv.xts <- xts(mv[,-1], mv[,1])
+mv.xts <- mv.xts[!duplicated(index(mv.xts)), ]
+mv.xts <- lag.xts(mv.xts, 1)
+mv.xts <- mv.xts[xts.range,]
+
+#Total Fund Multiplier
+tf.index <- as.vector(cumprod(1 + apply.quarterly(b.tf.xts, FUN = Return.cumulative)))
+tf.multiplier <- tf.index[length(tf.index)] / tf.index
+
+#calculate total DVA
+dva.xts <- (r.xts - b.tf.xts) * mv.xts
+dva.xts <- dva.xts %>% 
+  apply.quarterly(., FUN = colSums) %>% 
+  multiply_by(tf.multiplier) %>% 
+  tomillions(.)
+
+end.qtr <- dim(dva.xts)[1]
+
+dva.summary.long <- data.frame(
+  colSums(coredata(dva.xts[(end.qtr- 3):end.qtr, ])),
+  colSums(coredata(dva.xts[(end.qtr-11):end.qtr, ])),
+  colSums(coredata(dva.xts[(end.qtr-19):end.qtr, ])),
+  colSums(coredata(dva.xts[(end.qtr-39):end.qtr, ]))) %>% 
+  set_colnames(c("One Year","Three Year","Five Year", "Ten Year")) %>%
+  gather(Period, DVA) %>% 
+  mutate(Period = factor(Period, levels = c("One Year","Three Year","Five Year", "Ten Year")))
+
+tf.dva.plot <- ggplot(dva.summary.long, aes(x = Period, y = DVA)) + 
+  geom_bar(stat = "identity", fill = highcolor) +
+  ggtitle("Total Fund Dollar Value Add", 
+          subtitle = paste("Relative to SAA Benchmark",label.d)) +
+  ylab("in Millions") + xlab("") + scale_y_continuous(labels = scales::dollar) +
+  theme(plot.title = element_text(hjust = 0.5, size = 12, face = "bold"),
+        plot.subtitle = element_text(hjust = 0.5, size = 10),
+        axis.title.y = element_text(size = 10, face = "italic"))
+tf.dva.plot
+  
+```
+
+
+## Governance and Compliance
+
+ASRS operates the investment program in accordance with statutory requirements under the direction of the ASRS Board and Executive Director.  ASRS has adopted a formal and well documented governance process as set forth in the Board Governance Manual and various Strategic Investment Policies and Standard Operating Procedures which have been adopted by the board and ASRS management.  
+
+The investment program is further guided by an Investment Policy Statement, which incorporates Investment Beliefs, which are adopted by the ASRS Board.  As noted above, the investments are implemented in accordance with a Strategic Asset Allocation, which is adopted by the board with input from investment staff and the external investment consultant.  Copies of the Investment Policy Statement and Strategic Asset Allocation are included in the materials for this Investment Section.
+
+Investments are implemented by the ASRS investment team under the direction of the Executive Director and with oversight by the external investment consultant and the board investment committee.  In accordance with written policies, investment decisions are made by asset class committees which meet monthly, or more frequently if necessary, and are documented by formal minutes and meeting materials which consist of staff reports and external consultant reports.  The external investment consultant attends the asset class committee meetings to remain informed on investment matters and to monitor that all governance procedures are followed.
+
+Compliance with statutes and policies is further monitored by our custody bank which checks every trade and reports daily on the compliance status of the portfolio.  Additionally, external consultants monitor the private markets program reviewing partnerships annually to confirm that fees are correctly calculated and reported, valuation policies are observed and that partnerships are being administered in accordance with the terms of the partnership agreement.
+
+## Cost
+
+While cost management is not an investment strategy per se, cost reduction is one of the most important ways to improve investment performance.  ASRS aggressively manages costs to help ensure the highest value is achieved for all our investment expenditures.  
+
+In the case of public markets where research and experience indicate that the prospects for adding value through management are limited, we are parsimonious in the payment of fees.  We manage approximately 50% of public market assets in house at effectively zero incremental cost.  Internally managed assets are implemented in enhanced index strategies designed to earn a premium compared to market returns and these strategies in aggregate have consistently outperformed their benchmarks by about 10bp per year.
+
+In private markets, costs are necessarily higher to implement these programs and we carefully monitor investments to ensure these costs are appropriately rewarded.  We are extremely cost conscious in the implementation of the private markets program.  We reduce costs by concentrating our relationships with a smaller number of highly qualified managers who agree to enter in to custom negotiated partnerships at reduced fees.  These partnerships, called "separate accounts", provide benefits to ASRS beyond reduced fees including custom investment criteria and favorable liquidity terms that give ASRS rights to influence or determine the pace of investment and liquidation of the partnership.  ASRS plans to continue to grow the separate account program to around 75% of private market assets.  
+
+## Reporting and Performance Measurement
+
+ASRS has implemented a comprehensive and transparent system of reports to keep the ASRS Management, Board and the public informed on ASRS investments.  ASRS complies with all required reporting under GASB standards and voluntarily complies with recommended disclosures of the Government Financial Officers Association ("GFOA").  All GFOA recommended disclosures are included in this investment section.
+
+Additionally, ASRS has been a leader in adopting rigorous investment performance measurement systems.  ASRS believes that sophisticated performance measurement contributes to the efficacy of portfolio management, improves decisions and leads to better results.  Starting in 2012, ASRS implemented performance measurement systems in its private markets investments based on new research recommending "public market equivalent" measurements  of performance.  ASRS continued the performance measurement project focusing on public equities and implementing Brinson style attribution analysis across the portfolio, returns based performance analysis using various statistical methods across rolling time frames and and holdings based style analysis across rolling time frames.  These methods were extended to fixed income assets in 2017 and to total fund reporting in 2018.
+
+## Technology
+
+ASRS is committed to using state of the art technology to bring the most sophisticated analytical methods to its decisions, to implement quality in data bases and information systems and to continuously enhance the productivity of the investment team.  As noted above, ASRS is implementing an ambitious performance measurement system project greatly increasing both the quality and quantity of information available for investment decisions.  We are implementing this at very low incremental cost utilizing the analytical expertise and software coding skills of existing staff.  Through automation of tasks previously performed by hand we are increasing the amount of time available for higher value and more creative work.  We also increase the reliability of information through automation and elimination of manual steps.  We are currently in the process of implementing a unified data system of position and performance data which will improve efficiency by eliminating human processing steps, enhance reliability, and improve flexibility in performance analysis. 
+
+## Conclusion
+
+It is an honor to serve the members and beneficiaries as your Chief Investment Officer.  We hope you find the materials in this Investment Section informative and helpful in understanding the investments of the Arizona State Retirement System.
+
+Sincerely,
+
+
+Karl Polen
