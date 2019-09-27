@@ -23,11 +23,12 @@ Fundamentally, investment returns are rewards for risks taken.  ASRS manages its
 
 ASRS is a long-term investor with a multi-decade horizon for its decisions.  We will tolerate short-term market fluctuations in order to position ourselves for long run gains.  We are a value oriented investor and, at times, will buy in markets out of favor and patiently await their recovery. 
 
-ASRS maintains a high level of liquidity with assets totaling over thirty times the cash required to fund benefits. As a pension fund, the cash requirements for benefits are highly stable and predictable.  These two facts combine to give ASRS an advantage in the market allowing it to provide liquidity to market participants with less flexibility and unpredictable cash needs.  ASRS capitalizes on this by participating in less liquid private markets for equities, real estate and credit.  These programs have significantly enhanced the diversity of our investments and have increased our returns. 
+ASRS maintains a high level of liquidity with assets totaling nearly forty times the cash required to fund benefits. As a pension fund, the cash requirements for benefits are highly stable and predictable.  These two facts combine to give ASRS an advantage in the market allowing it to provide liquidity to market participants with less flexibility and unpredictable cash needs.  ASRS capitalizes on this by participating in less liquid private markets for equities, real estate and credit.  These programs have significantly enhanced the diversity of our investments and have increased our returns. 
 
 ## Investment Environment
 
-Global capital markets have come a long way in recovering from the global financial crisis.   With economic conditions improving across the globe, equity markets are generally strong, especially in the United States which recently has seen record valuations.  Credit markets continue to be impacted as institutions continue to adjust to new regulatory regimes and ASRS has capitalized on this by providing liquidity to sectors no longer served by commercial banks.  Investment grade bond markets were buoyed for a number of years after the financial crisis by central bank policies including low interest rates and asset purchases sometimes referred to as "quantitative easing".  However, with improving conditions central banks have raised policy rates and reduced asset purchases.  Consequently, bond markets have been flat for the last two years.
+
+Ten years have passed since the worst days of the global financial crisis and the world economy has seen steady growth throughout that period.  Much progress has been made in improved banking regulations which increase the robustness and stability of the global financial system.  Global trade continued to expand and emerging economies grew rapidly.  In that environment, companies were profitable and their stocks soared.  Bond markets performed well as central banks were accommodating with asset purchases and low policy rates.  At this stage, there are signs of slowing growth and heightened risks of shocks from international events.  In this environment, the stock market has shown mixed results with higher volatility. Bond markets remain strong with renewed central bank easing.
 
 The following chart shows market returns for the last 15 years for the public market asset classes included in the ASRS strategic asset allocation.  
 
@@ -50,18 +51,18 @@ gg=function(x,variable.name="Variable",value.name="Value") {
        value.name=value.name)
 }
 
-require(tidyverse)
-require(magrittr)
-require(ggplot2)
-require(Rblpapi)
-require(reshape2)
-require(lubridate)
-require(zoo)
-require(RColorBrewer)
+library(tidyverse)
+library(magrittr)
+library(ggplot2)
+library(Rblpapi)
+library(reshape2)
+library(lubridate)
+library(zoo)
+library(RColorBrewer)
 library(data.table)
 library(asrsMethods)
 library(asrsPalettes)
-require(scales)
+library(scales)
 library(tbl2xts)
 
 
@@ -93,7 +94,7 @@ indices_lst <- list()
 for(t in tickers) {
   dat <- bbgdat[[t]] %>% set_colnames(c("Date", "Return")) %>% tbl_xts()
   dat.x <- diff(log(dat))
-  annual.ret <- -1+exp(rollapply(dat.x,width=12,by=12,FUN=sum,align='right')) %>% xts_tbl()
+  annual.ret <- -1+exp(rollapply(dat.x[-1],width=12,by=12,FUN=sum,align='right')) %>% xts_tbl()
   indices_lst[[t]] <- annual.ret %>% mutate(Index = t)
 }
 
@@ -107,46 +108,48 @@ cval=70
 lowcolor=IMD.palette()[2]
 highcolor=IMD.palette()[3]
 colorpalette=IMD.palette()[2:3]
-require(ggplot2)
-ggplot(bbg_ret, aes(y=Index,x=date,label= round(Return *100, 2)),ylim=c(1,length(tickers)))+
+
+ggplot(bbg_ret, aes(y=Index,x=date,label= round(Return *100,2)),
+       ylim=c(1,length(tickers)))+
   geom_tile(aes(fill=Return))+
   scale_fill_gradient2(midpoint=0,low=lowcolor,high=highcolor)+
-  geom_text(size=3)+ 
-  scale_y_discrete("",breaks=asset.ind[1:length(asset.name)],
-                               labels=asset.name)+
-  ggtitle("One Year Returns\nfor indicated end dates")+
+  geom_text(size=2.5)+ 
+  scale_y_discrete(breaks=tickers,labels=asset.name)+
+  ggtitle("One year yeturns for fiscal years ended June 30")+
   theme(
     panel.background=element_blank(),
     panel.grid.major=element_blank(),
     panel.grid.minor=element_blank(),
-    axis.text.x=element_text(angle=90,hjust=1)
+    axis.text.x=element_text(angle=90,hjust=0)
   )
 ```
 
 ## Investment Results
 
-The ASRS investment program had another good year.  Not only were markets positive, but our implementation decisions added value compared to our benchmarks.  Our one year return of 9.4% exceeded our strategic asset allocation benchmark by 1%.  Our ten year return of 7.4% exceeded its benchmark by .7%.  Notably, the ten year results were only .1% lower than the long run actuarially assumed return of 7.5%, notwithstanding the devastating impacts of the global financial crisis during the early years of that time frame.  On a long run basis, ASRS has earned compound returns of 9.7% per year for the last 43 years.
+The ASRS investment program continues to perform well.  Investment returns of 6.6%, 9.9%, 6.6%, and 10.4% for the one, three, five and ten year periods exceeded our benchmarks by 1.4%, 2.1%, 1.8% and 1.3%, respectively.  According to our investment consultant NEPC, these returns placed ASRS in the top quartile of public pension plans for all of these time periods and in the top 4% for the ten year period.  While market conditions have not allowed us to earn the 7.5% actuarial return in the most recent year, ASRS ten year returns exceeded the actuarial target by nearly 3% per year.  On a very long run basis, ASRS has earned compound returns of 9.7% per year for the last 44 years.
 
 ```{r, echo=FALSE, warning=FALSE, message=FALSE, fig.height=3.5, fig.width=7}
 desc=c("One Year","Three Year","Five Year","Ten Year","Inception (since 1975)")
-return_actual=c(6.6,9.9,6.6,7.4,10.4)
-return_bench=c(5.2,7.8,8.0,4.8,9.1)
+return_actual=c(6.6,9.9,6.6,10.4,9.7)
+return_bench=c(5.2,7.8,4.8,9.1,9.2)
 df.actual=data.frame(Return="Actual",id=1:length(desc),desc,Returns=return_actual)
 df.bench=data.frame(Return="Benchmark",id=1:length(desc),desc,Returns=return_bench)
 df.both=rbind(df.actual,df.bench)
 ggplot(df.both,aes(x=id,y=Returns,fill=Return))+
   geom_bar(stat="identity",position=position_dodge())+
+  geom_text(aes(label=round(Returns,1)),position=position_dodge(width=.9),
+            vjust=1,color="white")+
   scale_x_continuous("",breaks=1:length(desc),labels=desc)+
   ggtitle("ASRS Total Fund Returns Compared to Market Benchmark")+
   ylab("Annual Return")+
   xlab("")+
   scale_fill_manual(values=colorpalette)+
   theme(
-    axis.text.x=element_text(angle=45,hjust=1)
-  )
+    axis.text.x=element_text(angle=45,hjust=1))
+  
 ```
 
-Stated in terms of dollars, small differences in returns compounded over a number of years have a big impact on the value of the total fund.  The 1% outperformance in the most recent year translates to additional profits of \$368 million added to the value of the fund.  Over ten years, the .7% outperformance added \$3.1 billion in value to the fund.
+Stated in terms of dollars, small differences in returns compounded over a number of years have a big impact on the value of the total fund.  The 1.4% outperformance in the most recent year translates to add.itional profits of \$537 million added to the value of the fund.  Over ten years, the 1.3% outperformance added nearly \$5 billion in value to the fund.
 
 
 ```{r , echo=FALSE, warning=FALSE, message=FALSE, fig.height=3.5, fig.width=7}
@@ -530,13 +533,14 @@ tf.dva.summary.long <- data.frame(
 qtrlyTfDva <- tf.dva.summary.long %>% group_by(Period) %>% summarise(total = sum(DVA))
 
 tf.dva.plot <- ggplot() +
-  geom_bar(data = tf.dva.summary.long, aes(x = Period, y = DVA, fill = Effect),stat = "identity") +
+  geom_bar(data = qtrlyTfDva, aes(x = Period, y = total   ),
+           stat = "identity", fill= highcolor) +
   geom_text(aes(Period, total, label = round(total), fill = NULL), data = qtrlyTfDva,
-            position = position_dodge(width = 0.9), vjust = -0.3) +
+            position = position_dodge(width = 0.9), vjust = 1, color = "white") +
   ggtitle("Total Fund Dollar Value Add",
           subtitle = "Relative to Strategic Asset Allocation Benchmark") +
   ylab("in Millions") + xlab("") + scale_y_continuous(labels = scales::dollar) +
-  scale_fill_manual(values = IMD.palette(), name = "") +
+  scale_fill_manual(values = IMD.palette()[3], name = "") +
   theme(plot.title = element_text(size = 12, face = "bold"),
         plot.subtitle = element_text(size = 10),
         axis.title.y = element_text(size = 10, face = "italic"),
@@ -574,7 +578,7 @@ Additionally, ASRS has been a leader in adopting rigorous investment performance
 
 ## Technology
 
-ASRS is committed to using state of the art technology to bring the most sophisticated analytical methods to its decisions, to implement quality in data bases and information systems and to continuously enhance the productivity of the investment team.  As noted above, ASRS is implementing an ambitious performance measurement system project greatly increasing both the quality and quantity of information available for investment decisions.  We are implementing this at very low incremental cost utilizing the analytical expertise and software coding skills of existing staff.  Through automation of tasks previously performed by hand we are increasing the amount of time available for higher value and more creative work.  We also increase the reliability of information through automation and elimination of manual steps.  We are currently in the process of implementing a unified data system of position and performance data which will improve efficiency by eliminating human processing steps, enhance reliability, and improve flexibility in performance analysis. 
+ASRS is committed to using state of the art technology to bring the most sophisticated analytical methods to its decisions, to implement quality in data bases and information systems and to continuously enhance the productivity of the investment team.  As noted above, ASRS has implemented a rigorous performance measurement system which has greatly increased the quality and quantity of information available for investment decisions.  We are implementing this at very low incremental cost utilizing the analytical expertise and software coding skills of existing staff.  Through automation of tasks previously performed by hand we are increasing the amount of time available for higher value and more creative work.  We also increase the reliability of information through automation and elimination of manual steps.  We are currently in the process of implementing a unified data system of position and performance data which will improve efficiency by eliminating human processing steps, enhance reliability, and improve flexibility in performance analysis. 
 
 ## Conclusion
 
