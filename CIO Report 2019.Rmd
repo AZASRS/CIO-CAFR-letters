@@ -1,7 +1,7 @@
 ---
 title: "Chief Investment Officer's Report"
 author: "Karl Polen"
-date: "October 1, 2018"
+date: "October 1, 2019"
 output: word_document
 ---
 ```{r initialize, echo=FALSE, message=FALSE, warning=FALSE}
@@ -50,12 +50,21 @@ gg=function(x,variable.name="Variable",value.name="Value") {
        value.name=value.name)
 }
 
+require(tidyverse)
+require(magrittr)
+require(ggplot2)
+require(Rblpapi)
 require(reshape2)
-require(Rbbg)
 require(lubridate)
 require(zoo)
 require(RColorBrewer)
+library(data.table)
+library(asrsMethods)
+library(asrsPalettes)
 require(scales)
+library(tbl2xts)
+
+
 if (isindices) 
   tickers=c("SPXT INDEX","SPTRMDCP INDEX","SPTRSMCP INDEX","NDDUEAFE INDEX","NCUDEAFE INDEX",
           "NDUEEGF INDEX","LBUSTRUU INDEX","LT11TRUU INDEX","LUACTRUU Index",
@@ -71,38 +80,38 @@ if (isfactors)
   asset.name=c("Momentum","Quality","Size","Value","Hi Div Yield","Low Vol","MSCI Large")
 asset.ind=c("a","b","c","d","e","f","g","h","i","j","k")
 asset.name=rev(asset.name)
-conn=blpConnect (verbose=FALSE)
-start.date=as.Date("2018-7-4")-years(15)-months(1)
-end.date=as.Date("2018-7-4")
-bbgdat=bdh(conn,tickers,"PX_LAST",start_date=start.date,end_date=end.date,
-           option_names="periodicitySelection",option_values="MONTHLY")
+conn=blpConnect()
+start.date=as.Date("2019-7-4")-years(15)-months(1)
+end.date=as.Date("2019-7-4")
+fields <- c("TOT_RETURN_INDEX_GROSS_DVDS","NAME", "PX_LAST")
+bbgdat <- bdh(tickers,  fields[3],start.date, end.date, options = 
+                      c("periodicitySelection" = "MONTHLY"))
+#bbgdat=bdh(tickers, fields, start.date=start, end.date=end, options= c("periodicitySelection" = "MONTHLY"))
 x=blpDisconnect(conn)
-ndx=match(bbgdat$ticker,tickers)
-bbgdat$ticker=asset.ind[ndx]
-bbgdat2=dcast(bbgdat,date~ticker)
-bbgdate=as.yearmon(bbgdat2$date)
-bbgdat2=as.matrix(bbgdat2[,-1])
-bbgdatz=zoo(diff(log(bbgdat2)),bbgdate[-1])
-bbgdat.annual=-1+exp(rollapply(bbgdatz,width=12,by=12,FUN=sum,align='right'))
-bbgdat.annual=round(bbgdat.annual*100,1)
-bbgdat.excess=round(bbgdat.annual-bbgdat.annual[,1],2)
-bbg.gg=gg(bbgdat.annual)
-bbgexcess.gg=gg(bbgdat.excess)
-colnames(bbg.gg)=c("Date","Index","Return")
-colnames(bbgexcess.gg)=c("Date","Index","Return")
+
+indices_lst <- list()
+for(t in tickers) {
+  dat <- bbgdat[[t]] %>% set_colnames(c("Date", "Return")) %>% tbl_xts()
+  dat.x <- diff(log(dat))
+  annual.ret <- -1+exp(rollapply(dat.x,width=12,by=12,FUN=sum,align='right')) %>% xts_tbl()
+  indices_lst[[t]] <- annual.ret %>% mutate(Index = t)
+}
+
+
+
+
+bbg_ret <- bind_rows(indices_lst) %>% filter(Return > 0 | Return < 0)
 lval=50
 cval=70
-#lowcolor=muted(brewer.pal(8,'Dark2')[6],l=lval,c=cval)
-#highcolor=muted(brewer.pal(8,'Dark2')[1],l=lval,c=cval)
-#colorpalette=muted(brewer.pal(8,'Dark2'),l=lval,c=cval)[c(1,6)]
+
 lowcolor=IMD.palette()[2]
 highcolor=IMD.palette()[3]
 colorpalette=IMD.palette()[2:3]
 require(ggplot2)
-ggplot(bbg.gg,aes(y=Index,x=Date,label=Return),ylim=c(1,length(tickers)))+
+ggplot(bbg_ret, aes(y=Index,x=date,label= round(Return *100, 2)),ylim=c(1,length(tickers)))+
   geom_tile(aes(fill=Return))+
   scale_fill_gradient2(midpoint=0,low=lowcolor,high=highcolor)+
-  geom_text(size=3)+
+  geom_text(size=3)+ 
   scale_y_discrete("",breaks=asset.ind[1:length(asset.name)],
                                labels=asset.name)+
   ggtitle("One Year Returns\nfor indicated end dates")+
@@ -120,8 +129,8 @@ The ASRS investment program had another good year.  Not only were markets positi
 
 ```{r, echo=FALSE, warning=FALSE, message=FALSE, fig.height=3.5, fig.width=7}
 desc=c("One Year","Three Year","Five Year","Ten Year","Inception (since 1975)")
-return_actual=c(9.4,7.8,8.9,7.4,9.7)
-return_bench=c(8.4,7.1,8.0,6.7,9.4)
+return_actual=c(6.6,9.9,6.6,7.4,10.4)
+return_bench=c(5.2,7.8,8.0,4.8,9.1)
 df.actual=data.frame(Return="Actual",id=1:length(desc),desc,Returns=return_actual)
 df.bench=data.frame(Return="Benchmark",id=1:length(desc),desc,Returns=return_bench)
 df.both=rbind(df.actual,df.bench)
@@ -157,76 +166,383 @@ library(grid)
 library(asrsMethods)
 library(asrsPalettes)
 
+source('performance_functions.R')
+source('composites.R')
+
 tomillions = function(x) x/1000000
-label.d = "as of 6/30/18"
+label.d = "as of 6/30/19"
 
 #Because of data issues, fix the start AND end date for the attribution analysis
-end.date <- as.Date("2018-06-30")
+dva.bgn = ymd("2018-06-30") 
+end.date <- as.Date("2019-06-30")
 
 #Ten year window
-start.date <- end.date - years(10)
-xts.start <- as.Date("2008-07-31")
-xts.range <- paste0(xts.start, "/", end.date)
+start.date <- end.date - years(10) + 1
+xts.range <- paste0(start.date, "/", end.date)
 
-nepc.dat <- read.csv("P:/IMD/Karl/R Projects/Public Performance/Data/CSVs/rNEPC.csv", stringsAsFactors = FALSE) %>%
-  mutate(ID = ShortName) %>%
-  mutate(Date = as.Date(AsOf, format = "%m/%d/%Y")) %>%
-  mutate(NetReturn = NetReturn/100) %>%
-  filter(between(Date, start.date, end.date) & Period == "Monthly")
+#Five Year Window
+start.date.5 <- end.date - years(5) + 1
+xts.range.5 <- paste0(start.date.5, "/", end.date)
 
-nepc.map <- read.csv("P:/IMD/Karl/R Projects/Public Performance/Data/Mapping/NEPC.map.csv", stringsAsFactors = FALSE)
+#One Year Window
+start.date.1 <- end.date - years(1) + 1
+xts.range.1 <- paste0(start.date.1, "/", end.date)
 
-#get return, name, & inception date
-r <- subset(nepc.dat, nepc.dat$ID == "RAY0032", select = c('Date','NetReturn'))
-r.xts <- xts(r[,-1], r[,1])
-r.xts <- r.xts[!is.na(r.xts),]
-r.xts <- r.xts[!duplicated(index(r.xts)), ]
-r.xts <- r.xts[xts.range,]
-i.d <- as.character(time(r.xts)[1])
+# Ranges
+range.qtr <- paste0(end.date + days(1) - months(3) , "/", end.date)
+range.1 <- paste0(end.date - years(1) + days(1), "/", end.date)
+range.3 <- paste0(end.date - years(3) + days(1), "/", end.date)
+range.5 <- paste0(end.date - years(5) + days(1), "/", end.date)
+range.10 <- paste0(end.date - years(10) + days(1), "/", end.date)
+range.ct <- paste0("2016-07-01","/",end.date)
 
-#benchmarks for each asset class and convert Private Equity & Private Debt to quarterly
-b.tf <- subset(nepc.dat, nepc.dat$ID == "RAY0001", select = c('Date','NetReturn'))
-b.tf.xts <- xts(b.tf[ ,-1], b.tf[ ,1])
-b.tf.xts <- b.tf.xts[xts.range,]
-b.tf.xts <- b.tf.xts[!duplicated(index(b.tf.xts)), ]
 
-#get market values
-mv <- subset(nepc.dat, nepc.dat$ID == "RAY0032", select = c('Date','MthEndMV'))
-mv.xts <- xts(mv[,-1], mv[,1])
-mv.xts <- mv.xts[!duplicated(index(mv.xts)), ]
-mv.xts <- lag.xts(mv.xts, 1)
-mv.xts <- mv.xts[xts.range,]
+########################  Data & Function Paths ################################
+
+path.wd <- "P:/IMD/Mike/R Projects/Performance_Reporting"
+
+#load data & mapping from SSBT
+path.ssbt <- "P:/IMD/2018 Database Project/MYSS Data/Copy of SSBT Data.xlsx"
+
+# daily data from state street
+path.daily <- "P:/IMD/2018 Database Project/MYSS Data/r_Recon.xlsm"
+
+path_historic_daily <- "P:/IMD/2018 Database Project/MYSS Data/r.Recon_fy2019.xlsm"
+
+# ACWI Tickers
+path.eq <- "P:/IMD/IMD Vista/PUBLIC EQUITY TEAM/5 Vendors & Systems/MSCI/ACWI IMI Index Names and Tickers.xlsx"
+
+# Historic RDS files
+path.dva.hist <- "P:/IMD/Mike/R Projects/Performance_Reporting/"
+
+# note - this code comes from Daily.Rmd 
+daily.data <- readRDS("P:/IMD/Karl/R projects/CIO Board Reports/rds/cio.report.df.rds")
+
+####################### BRING IN MAPPING DATA ########################
+
+
+policy.tree <- read_excel(path.ssbt, sheet = "Policy Tree") %>%
+  mutate(Inception = ymd(Inception), Defunding = ymd(Defunding))
+
+composite.tree <- read_excel(path.ssbt, sheet = "Composite Table")
+
+benchmark.map <- read_excel(path.ssbt, sheet = "BM Mapping") %>% 
+  transmute(ssbtID = `FUND ID`,
+            fundName = `FUND NAME`,
+            benchID = `PREFERRED BENCHMARK ID`,
+            benchName = `BENCHMARK NAME`)
+
+nepc.map <- read_excel(path.ssbt, sheet = "NEPC Map")
+
+ssbt.data <- read_excel(path.ssbt, sheet = "New SSBT Data") %>% 
+  #filter(Level == "TOTAL - Net Mgr") %>% 
+  transmute(Date = ymd(`Effective Date`),
+            ssbtID = `Fund ID`,
+            Return = `1 Month`/100,
+            fundName = `Fund Long Name`,
+            endMV = `Ending Market Value`,
+            bgnMV = `Beginning Market Value`,
+            cashFlow = `Net Cash Flow`)
+
+benchmark.data <- read_excel(path.ssbt, sheet = "BM History") %>% 
+  transmute(Date = ymd(`Effective Date`),
+            benchID = `Fund ID`,
+            Return = `1 Month`/100,
+            benchName = `Fund Long Name`)
+
+#SAA Interim Policy Weights with MA adjustment
+saa.ssbt <- read_excel(path.ssbt, sheet = "SAA-Old SSBT") %>%
+  mutate(Date = ymd(Date)) %>% 
+  tbl_xts()
+
+saa.nepc <- read_excel(path.ssbt, sheet = "SAA-Old NEPC") %>%
+  mutate(Date = ymd(Date))
+
+##################  Bring in SS Daily Data  ####################
+
+
+r.long <- read_excel(path_historic_daily, sheet = "10JD.r.Daily.All.Accounts.b") %>%
+   mutate(
+    Date = ymd(`Effective Date`),
+    ID = `Account ID`,
+    b.mv = `Beginning Mkt Value`,
+    e.mv = `Ending Market Value`,
+    cf = `Net Cash Flow`,
+    r.day = e.mv/(b.mv + cf) - 1,
+    b.day = `1 Day(Benchmark)` / 100) %>%
+  filter(!is.na(e.mv)) %>%   
+  select(Date, Name, ID, b.mv, e.mv, cf, r.day, b.day)
+
+
+today.date <- format(max(r.long$Date), "%m/%d/%Y")
+dva.end = max(r.long$Date)
+
+######################### Calculate returns, grouping, test data ####################
+
+### Loop for Monthly Numbers - each ssbtID and SSBT_Composite_ID ####
+allIDs <- c(
+  policy.tree %>% select(ssbtID) %>% unique() %>% unlist(),
+  composite.tree %>% select(SSBT_Composite_ID) %>% unique() %>% unlist())
+
+#create empty lists
+r.all.list = list()   
+b.all.list = list()
+bgnMV.all.list = list()
+endMV.all.list = list()
+sel.all.list = list()
+names.vec <- vector()
+
+for (i in allIDs) {
+  # names
+  names.vec[i] <- get_shortName(i)
+  
+  # get return and inception date for each ID
+  r.xts <- get_return_data(i)[get_xts_end(i), "Return"]
+  inception <- as.character(time(r.xts)[1])
+  
+  # get benchmark for each ID
+  b.xts <- get_bench_data(i)[get_xts_end(i),]
+  
+  #get market beginning and ending values for each ID
+  bgnMV.xts <- get_return_data(i)[get_xts_end(i), "bgnMV"]
+  endMV.xts <- get_return_data(i)[get_xts_end(i), "endMV"]
+  
+  
+  r.all.list[[i]] <- r.xts %>% set_colnames(i)
+  b.all.list[[i]] <- b.xts %>% set_colnames(i)
+  bgnMV.all.list[[i]] <- bgnMV.xts %>% set_colnames(i)
+  endMV.all.list[[i]] <- endMV.xts %>% set_colnames(i)
+  
+  #calculate selection effect for each ID
+  sel.all.list[[i]] <- ((r.xts - b.xts) * bgnMV.xts) #%>% set_colnames(i)
+}
+
+#### Loop for ALL Daily Numbers ####
+allDailyIDs <- unique(r.long$ID)
+
+b.TFdaily.xts <- r.long %>% 
+  filter(ID == "ASRSA001", Date > dva.bgn, Date <= dva.end) %>% 
+  select(Date, b.day) %>% 
+  tbl_xts()
+
+r.all.daily <- list()
+b.all.daily <- list()
+endMV.daily <- list()
+bgnMV.daily <- list()
+sel.all.daily <- list()
+
+
+for (i in allDailyIDs) {
+  #get the data
+  return.df <- r.long %>% 
+    filter(ID == i, Date > dva.bgn, Date <= dva.end, !is.na(e.mv)) %>% 
+    mutate(ABAL = b.mv + cf) %>%
+    select(Date, Name, ABAL, e.mv, r.day, b.day)
+  
+  r.xts <- return.df %>% 
+    select(Date, r.day) %>% 
+    tbl_xts()
+  r.all.daily[[i]] <- r.xts %>% set_colnames(i)
+  
+  b.xts <- return.df %>% 
+    select(Date, b.day) %>% 
+    tbl_xts()
+  b.all.daily[[i]] <- b.xts %>% set_colnames(i)
+  
+  endMV.xts <- return.df %>% 
+    select(Date, e.mv) %>% 
+    tbl_xts()
+  endMV.daily[[i]] <- endMV.xts %>% set_colnames(i)
+  
+  bgnMV.xts <- return.df %>% 
+    select(Date, ABAL) %>% 
+    tbl_xts()
+  bgnMV.daily[[i]] <- bgnMV.xts %>% set_colnames(i)
+  
+  #calculate selection effect 
+  b.xts <- na.fill(b.xts, 0)    # Ideally we should have a check here 
+  sel.all.daily[[i]] <- ((r.xts - b.xts) * bgnMV.xts) %>% set_colnames(i)
+}
+
+# JD Concept for a Multiplier
+b.tfMerge.xts <- rbind.xts(
+  b.all.list$ASRSA001,
+  b.all.daily$ASRSA001
+)
+tf.mergeIndex <- as.vector(cumprod(1 + b.tfMerge.xts))
+tf.mergeMultiplier <- tf.mergeIndex[length(tf.mergeIndex)] / tf.mergeIndex
+tf.mergeMultiplier.xts <- xts(tf.mergeMultiplier, order.by = time(b.tfMerge.xts)) %>% 
+  set_colnames("tfMultiplier")
+
+comp.id <- c("ASRSA001", "ASRSA040", "ASRSA030", "ASRSA054", 
+             "ASRSA070", "ASRSA019", "ASRSA060")
+comp.name <- c("Total Fund", "Cash", "Bonds", "Credit",
+               "Equity", "Real Estate", "Other")
+
+#Portfolio Returns
+r.ac <- do.call(merge, r.all.daily[comp.id])
+
+#Benchmark Returns
+b.ac <- do.call(merge, b.all.daily[comp.id])
+
+#Market Values
+mv.ac <- do.call(merge, bgnMV.daily[comp.id])
+
+source('build_saa.R')
+
+b.tf.xts <- r.long %>% 
+  filter(ID == "ASRSA001", Date > ymd("2018-06-30")) %>% 
+  select(Date, b.total.fund = b.day) %>% 
+  tbl_xts()
 
 #Total Fund Multiplier
-tf.index <- as.vector(cumprod(1 + apply.quarterly(b.tf.xts, FUN = Return.cumulative)))
+tf.index <- as.vector(cumprod(1 + b.ac[, 1]))
 tf.multiplier <- tf.index[length(tf.index)] / tf.index
+tfBenchMonthly <- rbind.xts(
+  get_bench_xts("ASRSA001"),
+  apply.monthly(b.ac[, 1], FUN = Return.cumulative))
 
-#calculate total DVA
-dva.xts <- (r.xts - b.tf.xts) * mv.xts
-dva.xts <- dva.xts %>% 
-  apply.quarterly(., FUN = colSums) %>% 
+tfBenchQuarterly <- apply.quarterly(tfBenchMonthly, FUN = Return.cumulative)
+
+#active exposure
+aw.percent <- mv.ac/rowSums(mv.ac[ ,-1]) - saa
+qtrTFaw <- apply.quarterly(aw.percent[paste0("/",end.date), -1], 
+                           FUN = colMeans) %>% 
+  set_colnames(comp.name[-1])
+aw.dollar <- as.vector(mv.ac[,1]) * aw.percent
+
+#Allocation effect
+# JD thinks that the issue is that b.tf.xts is only for FY 2019
+# Thus R is repeating the b.tf.xts vector
+# head(b.ac)
+# head(b.tf.xts)
+
+allocation <- aw.dollar * (b.ac - as.vector(b.tf.xts))
+qtr.allocation <- apply.quarterly(allocation[paste0("/",end.date), -1], 
+                                  FUN = colSums) %>% 
+  set_colnames(comp.name[-1])
+allocation.df <- allocation[paste0(dva.bgn+1,"/"),] %>% 
   multiply_by(tf.multiplier) %>% 
-  tomillions(.)
+  xts_tbl() %>% 
+  set_colnames(c("Date", comp.name))
+allocation.lf <- gather(allocation.df, "Asset.Class", "DVA", -Date) %>% 
+  mutate(Type = "Allocation")
 
-end.qtr <- dim(dva.xts)[1]
+#Selection effect
+selection <- do.call(merge, sel.all.daily[comp.id]) %>% 
+  set_colnames(comp.id)
+qtr.selection <- apply.quarterly(selection[paste0("/", end.date), -1], 
+                                 FUN = colSums) %>% 
+  set_colnames(comp.name[-1])
+selection.df <- selection[paste0(dva.bgn+1, "/"), ] %>% 
+  multiply_by(tf.multiplier) %>% 
+  xts_tbl() %>% 
+  set_colnames(c("Date", comp.name))
+selection.lf <- gather(selection.df, "Asset.Class", "DVA", -Date) %>% 
+  mutate(Type = "Excess Return")
 
-dva.summary.long <- data.frame(
-  colSums(coredata(dva.xts[(end.qtr- 3):end.qtr, ])),
-  colSums(coredata(dva.xts[(end.qtr-11):end.qtr, ])),
-  colSums(coredata(dva.xts[(end.qtr-19):end.qtr, ])),
-  colSums(coredata(dva.xts[(end.qtr-39):end.qtr, ]))) %>% 
+total <- allocation + selection
+qtr.total <- apply.quarterly(total[paste0("/", end.date), ], FUN = colSums)
+total.df <- total[paste0(dva.bgn+1, "/"), ] %>% 
+  multiply_by(tf.multiplier) %>% 
+  xts_tbl() %>% 
+  set_colnames(c("Date", comp.name))
+total.lf <- gather(total.df, "Asset.Class", "DVA", -Date) %>% 
+  mutate(Type = "Total")
+
+##TODO: investigate why not pennies
+tf.residual <- total[,1] - rowSums(total[,-1])
+qtrTFresidual <- apply.quarterly(tf.residual[paste0("/", end.date), ], 
+                                 FUN = colSums)
+
+
+residual.lf <- tf.residual %>% 
+  multiply_by(tf.multiplier) %>% 
+  xts_tbl() %>% 
+  set_colnames(c("Date", "Residual")) %>% 
+  gather("Asset.Class", "DVA", -Date) %>% 
+  mutate(Asset.Class = "Total Fund", Type = "Residual")
+
+tf.dva.fytd.long <- bind_rows(allocation.lf, selection.lf, total.lf, residual.lf)
+
+tf.dva.fytd <- tf.dva.fytd.long %>%
+  filter(Date >= dva.bgn) %>% 
+  group_by(Asset.Class, Type) %>% 
+  summarize(DVA = sum(to_millions(DVA))) %>% 
+  filter(Type %in% c("Allocation", "Excess Return", "Residual")) %>% 
+  mutate(Type = factor(Type, 
+    levels = c("Allocation", "Excess Return", "Residual")))
+
+tfDVAtotal <- tibble(
+  "Total Fund DVA" = as.vector(total[ ,1]),
+  "Allocation" = rowSums(allocation[ ,-1]),
+  "Excess Return" = rowSums(selection[ ,-1]),
+  "Residual" = as.vector(tf.residual),
+  "Date" = time(total)) %>% tbl_xts()
+qtrTFsum <- apply.quarterly(tfDVAtotal[paste0("/", end.date), ],
+                           FUN = colSums)
+
+
+tf.fytd.main <- tf.dva.fytd %>% filter(Asset.Class != "Other", Asset.Class != "Cash")
+acTotals <- tf.fytd.main %>% group_by(Asset.Class) %>% summarise(total = sum(DVA))
+
+
+
+#Total Fund Data
+r.totalFund <- get_return_data("ASRSA001")[xts.range,]
+b.totalFund <- get_bench_data("ASRSA001")[xts.range,]
+tf.index <- as.vector(cumprod(1 + apply.quarterly(b.totalFund, FUN = Return.cumulative)))
+tf.multiplierQtrly <- tf.index[length(tf.index)] / tf.index
+
+data.totalFund <- merge(r.totalFund, b.totalFund)
+tf.return.long <- data.frame(
+  t(Return.annualized(data.totalFund[range.1, c(1,4)])),
+  t(Return.annualized(data.totalFund[range.3, c(1,4)])),
+  t(Return.annualized(data.totalFund[range.5, c(1,4)])),
+  t(Return.annualized(data.totalFund[range.10, c(1, 4)]))
+) %>%
   set_colnames(c("One Year","Three Year","Five Year", "Ten Year")) %>%
-  gather(Period, DVA) %>% 
-  mutate(Period = factor(Period, levels = c("One Year","Three Year","Five Year", "Ten Year")))
+  mutate(Portfolio = c("Total Fund", "Strategic Asset Allocation Benchmark")) %>%
+  gather(Period, Return, - Portfolio) %>%
+  mutate(Period = factor(Period, levels = c("One Year","Three Year","Five Year", "Ten Year"))) %>%
+  mutate(Portfolio = factor(Portfolio, levels = c("Total Fund", "Strategic Asset Allocation Benchmark")))
 
-tf.dva.plot <- ggplot(dva.summary.long, aes(x = Period, y = DVA)) + 
-  geom_bar(stat = "identity", fill = highcolor) +
-  ggtitle("Total Fund Dollar Value Add", 
-          subtitle = paste("Relative to SAA Benchmark",label.d)) +
+tf.total <- readRDS(paste0(path.wd, "/", "total fund dva.rds")) %>% 
+  xts_tbl() %>% mutate("Excess Return" = Selection, `Total Fund DVA` = Total.Fund.DVA) %>% 
+  select(date, `Total Fund DVA`, Allocation, `Excess Return`, Residual) %>% tbl_xts() %>% 
+  rbind(to_millions(qtrTFsum))
+
+tf.dva.summary <- tf.total[xts.range, ] %>% multiply_by(tf.multiplierQtrly)
+#colnames(tf.dva.summary)[3] <- "Excess Return"
+
+tf.dva.summary.long <- data.frame(
+  colSums(coredata(tf.dva.summary[37:40, -1])),
+  colSums(coredata(tf.dva.summary[29:40, -1])),
+  colSums(coredata(tf.dva.summary[21:40, -1])),
+  colSums(coredata(tf.dva.summary[, -1]))
+) %>%
+  set_colnames(c("One Year","Three Year","Five Year", "Ten Year")) %>%
+  mutate(Effect = rownames(.)) %>%
+  gather(Period, DVA, -Effect) %>%
+  mutate(Period = factor(Period, levels = c("One Year","Three Year","Five Year", "Ten Year"))) %>%
+  mutate(Effect = factor(Effect, levels = c("Allocation", "Excess Return", "Residual")))
+
+qtrlyTfDva <- tf.dva.summary.long %>% group_by(Period) %>% summarise(total = sum(DVA))
+
+tf.dva.plot <- ggplot() +
+  geom_bar(data = tf.dva.summary.long, aes(x = Period, y = DVA, fill = Effect),stat = "identity") +
+  geom_text(aes(Period, total, label = round(total), fill = NULL), data = qtrlyTfDva,
+            position = position_dodge(width = 0.9), vjust = -0.3) +
+  ggtitle("Total Fund Dollar Value Add",
+          subtitle = "Relative to Strategic Asset Allocation Benchmark") +
   ylab("in Millions") + xlab("") + scale_y_continuous(labels = scales::dollar) +
-  theme(plot.title = element_text(hjust = 0.5, size = 12, face = "bold"),
-        plot.subtitle = element_text(hjust = 0.5, size = 10),
-        axis.title.y = element_text(size = 10, face = "italic"))
+  scale_fill_manual(values = IMD.palette(), name = "") +
+  theme(plot.title = element_text(size = 12, face = "bold"),
+        plot.subtitle = element_text(size = 10),
+        axis.title.y = element_text(size = 10, face = "italic"),
+        axis.text.x = element_text(size = 10), axis.text.y = element_text(size = 10),
+        legend.position = 'bottom')
+
 tf.dva.plot
   
 ```
