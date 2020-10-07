@@ -1,0 +1,189 @@
+---
+title: "Chief Investment Officer's Report"
+author: "Karl Polen"
+date: "October 1, 2020"
+output: word_document
+---
+```{r initialize, echo=FALSE, message=FALSE, warning=FALSE}
+library(knitr)
+library(asrsMethods)
+library(asrsPalettes)
+#opts_chunk$set(echo=FALSE, cache=FALSE)
+#read_chunk('CIO Report 2018 r script.r')
+```
+
+
+It is a privilege to deliver this Investment Section to the Comprehensive Annual Financial Report of the Arizona State Retirement System.  In this section we will discuss our investment strategy, the investment environment and our investment results.  We will also discuss our commitment to compliance, governance, rigorous measurement, and transparent reporting.  Finally, we will deliver various documents and schedules providing detailed information about the ASRS investment program.
+
+## Investment Strategy
+
+ASRS manages its investments in accordance with a strategic asset allocation.  The ASRS investment team seeks to enhance returns compared to strategic asset allocation benchmarks through its implementation of the investment program and tactical positioning relative to strategic targets.
+
+Fundamentally, investment returns are rewards for risks taken.  ASRS manages its risk in a highly diversified program across multiple global markets including equities, real estate and credit.  The diversity of the program expands opportunities for gain and reduces risk that would be present in a more concentrated approach.    
+
+ASRS is a long-term investor with a multi-decade horizon for its decisions.  We will tolerate short-term market fluctuations in order to position ourselves for long run gains.  We are a value oriented investor and, at times, will buy in markets out of favor and patiently await their recovery. 
+
+ASRS maintains a high level of liquidity with assets totaling forty times the cash required to fund benefits. As a pension fund, the cash requirements for benefits are highly stable and predictable.  These two facts combine to give ASRS an advantage in the market allowing it to provide liquidity to market participants with less flexibility and unpredictable cash needs.  ASRS capitalizes on this by participating in less liquid private markets for equities, real estate and credit.  These programs have significantly enhanced the diversity of our investments and have increased our returns.
+
+According to our independent investment consultant NEPC, *the combined effect of these efforts has been to place the ASRS among the top 10% of investment returns earned by U.S. public pension plans over the last ten years.*  I offer thanks and congratulations to my colleagues whose thoughtful, diligent and tireless efforts have led to these results.
+
+## Investment Environment
+
+The Coronavirus pandemic has caused dramatic changes in financial markets.  Stock markets moved up or down more than 20% in three consecutive quarters in the fiscal year just ended, a level of volatility not seen since the 1930's.  The global financial markets were under tremendous stress in March of 2020 as the world came to grips with the implications of the health crisis.  Quick and decisive action by major central banks to inject liquidity maintained order in financial markets.  National governments stabilized the economy with appropriate stimulus and support for individuals and firms under stress from the pandemic.  As a result of these actions, financial markets largely recovered in the second and third quarters of this calendar year.  
+
+The following chart shows market returns for the last 10 years for major public market asset classes.  
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE, fig.height=5.5, fig.width=8}
+isfactors=FALSE
+isindices=TRUE
+
+
+unzoo=function(x) {
+  timetemp=as.character(time(x))
+  nametemp=c("Date",colnames(x))
+  ans=cbind(timetemp,as.data.frame(x))
+  rownames(ans)=NULL
+  colnames(ans)=nametemp
+  return(ans)
+}
+gg=function(x,variable.name="Variable",value.name="Value") {
+  melt(unzoo(x),id.vars="Date",
+       variable.name=variable.name,
+       value.name=value.name)
+}
+
+library(tidyverse)
+library(magrittr)
+library(ggplot2)
+library(Rblpapi)
+library(reshape2)
+library(lubridate)
+library(zoo)
+library(RColorBrewer)
+library(data.table)
+library(asrsMethods)
+library(asrsPalettes)
+library(scales)
+library(tbl2xts)
+
+
+if (isindices) 
+  tickers=c("M1WDW$GI INDEX","MIMUUSAG INDEX","MIMUAWUN INDEX"
+            ,"LBUSTRUU INDEX","LUACTRUU Index", "LF98TRUU INDEX")
+if (isfactors) 
+  tickers=c("M2US000$ INDEX","M2USSNQ INDEX","M2USEW INDEX","M2USEV INDEX",
+            "M2USADVD INDEX","M2USMVOL INDEX","MLCUUSAG INDEX")
+tickers=(rev(tickers))
+if (isindices)
+  asset.name=c("Total Global Stocks","US Stocks","International Stocks",
+             "Barclays Agg", "Investment Grade Bonds","High Yield Bonds")
+if (isfactors)
+  asset.name=c("Momentum","Quality","Size","Value","Hi Div Yield","Low Vol","MSCI Large")
+asset.ind=c("a","b","c","d","e","f")
+asset.name=rev(asset.name)
+conn=blpConnect()
+start.date=as.Date("2020-7-4")-years(10)-months(1)
+end.date=as.Date("2020-7-4")
+fields <- c("TOT_RETURN_INDEX_GROSS_DVDS","NAME", "PX_LAST")
+bbgdat <- bdh(tickers,  fields[3],start.date, end.date, options = 
+                      c("periodicitySelection" = "MONTHLY"))
+#bbgdat=bdh(tickers, fields, start.date=start, end.date=end, options= c("periodicitySelection" = "MONTHLY"))
+x=blpDisconnect(conn)
+
+indices_lst <- list()
+for(t in tickers) {
+  dat <- bbgdat[[t]] %>% set_colnames(c("Date", "Return")) %>% tbl_xts()
+  dat.x <- diff(log(dat))
+  annual.ret <- -1+exp(rollapply(dat.x[-1],width=12,by=12,FUN=sum,align='right')) %>% xts_tbl()
+  indices_lst[[t]] <- annual.ret %>% mutate(Index = t)
+}
+
+
+
+
+bbg_ret <- bind_rows(indices_lst) %>% filter(Return > 0 | Return < 0)
+lval=50
+cval=70
+
+lowcolor=IMD.palette()[2]
+highcolor=IMD.palette()[3]
+colorpalette=IMD.palette()[2:3]
+
+ggplot(bbg_ret, aes(y=Index,x=date,label= round(Return *100,1)),
+       ylim=c(1,length(tickers)))+
+  geom_tile(aes(fill=Return))+
+  scale_fill_gradient2(midpoint=0,low=lowcolor,high=highcolor)+
+  geom_text(size=4)+ 
+  scale_y_discrete(breaks=tickers,labels=asset.name)+
+  ggtitle("One year yeturns for fiscal years ended June 30")+
+  theme(
+    panel.background=element_blank(),
+    panel.grid.major=element_blank(),
+    panel.grid.minor=element_blank(),
+    axis.text.x=element_text(angle=90,hjust=0)
+  )
+```
+
+## Investment Results
+
+The ASRS investment program continues to perform well in spite of the challenges of the current environment.  Investment returns of .8%, 5.5%, 6.1%, and 9.5% for the one, three, five and ten year periods exceeded our benchmarks by .8%, 1.2%, 1.6% and 1.1%, respectively.  While market conditions have not allowed us to earn the 7.5% actuarial return in recent periods, ASRS ten year returns exceeded the actuarial target by 1.4% per year.  On a very long run basis, ASRS has earned compound returns of 9.5% per year for the last 45 years.
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE, fig.height=3.5, fig.width=7}
+desc=c("One Year","Three Year","Five Year","Ten Year","Inception (since 1975)")
+return_actual=c(.8,5.5,6.1,8.9,9.5)
+return_bench=c(-.05,4.3,4.5,7.8,9.0)
+df.actual=data.frame(Return="Actual",id=1:length(desc),desc,Returns=return_actual)
+df.bench=data.frame(Return="Benchmark",id=1:length(desc),desc,Returns=return_bench)
+df.both=rbind(df.actual,df.bench)
+ggplot(df.both,aes(x=id,y=Returns,fill=Return))+
+  geom_bar(stat="identity",position=position_dodge())+
+  geom_text(aes(label=round(Returns,1)),position=position_dodge(width=.9),
+            vjust=1,color="white")+
+  scale_x_continuous("",breaks=1:length(desc),labels=desc)+
+  ggtitle("ASRS Total Fund Returns Compared to Market Benchmark")+
+  ylab("Annual Return")+
+  xlab("")+
+  scale_fill_manual(values=colorpalette)+
+  theme(
+    axis.text.x=element_text(angle=45,hjust=1))
+  
+```
+
+Stated in terms of dollars, small differences in returns compounded over a number of years have a big impact on the value of the total fund.  The .8% out performance compared to benchmark in the most recent year translates to additional profits of \$290 million added to the value of the fund.  Over ten years, the 1.1% out performance added \$3.6 billion in value to the fund.
+
+
+
+
+## Governance and Compliance
+
+ASRS operates the investment program in accordance with statutory requirements under the direction of the ASRS Board and Executive Director.  ASRS has adopted a formal and well documented governance process as set forth in the Board Governance Manual and various Strategic Investment Policies and Standard Operating Procedures which have been adopted by the board and ASRS management.  
+
+The investment program is further guided by an Investment Policy Statement, which incorporates Investment Beliefs, which are adopted by the ASRS Board.  As noted above, the investments are implemented in accordance with a Strategic Asset Allocation, which is adopted by the board with input from investment staff and the external investment consultant.  Copies of the Investment Policy Statement and Strategic Asset Allocation are included in the materials for this Investment Section.
+
+Investments are implemented by the ASRS investment team under the direction of the Executive Director and with oversight by the external investment consultant and the board investment committee.  In accordance with written policies, investment decisions are made by asset class committees which meet weekly and are documented by formal minutes and meeting materials which consist of staff reports and external consultant reports.  The external investment consultant attends the asset class committee meetings to remain informed on investment matters and to monitor that all governance procedures are followed.
+
+Compliance with statutes and policies is further monitored by our custody bank which checks every trade and reports daily on the compliance status of the portfolio.  Additionally, external consultants monitor the private markets program reviewing partnerships annually to confirm that fees are correctly calculated and reported, valuation policies are observed and that partnerships are being administered in accordance with the terms of the partnership agreement.
+
+## Cost
+
+While cost management is not an investment strategy per se, cost reduction is one of the most important ways to improve investment performance.  ASRS aggressively manages costs to help ensure the highest value is achieved for all our investment expenditures.  
+
+In the case of public markets where research and experience indicate that the prospects for adding value through management are limited, we are parsimonious in the payment of fees.  We manage approximately 50% of public market assets in house at effectively zero incremental cost.  Internally managed assets are implemented in enhanced index strategies designed to earn a premium compared to market returns.
+
+In private markets, costs are necessarily higher to implement these programs and we carefully monitor investments to ensure these costs are appropriate.  We are extremely cost conscious in the implementation of the private markets program.  We reduce costs by concentrating our relationships with a smaller number of highly qualified managers who agree to enter in to custom negotiated partnerships at reduced fees.  These partnerships, called "separate accounts", provide benefits to ASRS beyond reduced fees including custom investment criteria and favorable liquidity terms that give ASRS rights to influence or determine the pace of investment and liquidation of the partnership.  ASRS plans to continue to grow the separate account program to around 80% of private market assets.  
+
+## Reporting and Performance Measurement
+
+ASRS has implemented a comprehensive and transparent system of reports to keep the ASRS Management, Board and the public informed on ASRS investments.  ASRS complies with all required reporting under GASB standards and voluntarily complies with recommended disclosures of the Government Financial Officers Association ("GFOA").  All GFOA recommended disclosures are included in this investment section.
+
+Additionally, ASRS has been a leader in adopting rigorous investment performance measurement systems.  ASRS believes that sophisticated performance measurement contributes to the efficacy of portfolio management, improves decisions and leads to better results.  Starting in 2012, ASRS implemented performance measurement systems in its private markets investments based on new research recommending "public market equivalent" measurements  of performance.  ASRS extended the performance measurement project to public markets implementing returns and holdings based methods.  ASRS portfolio managers now receive daily performance attribution analysis to assist in managing their portfolios.
+
+
+## Conclusion
+
+It is an honor to serve the members and beneficiaries as your Chief Investment Officer.  We hope you find the materials in this Investment Section informative and helpful in understanding the investments of the Arizona State Retirement System.
+
+Sincerely,
+
+
+Karl Polen
